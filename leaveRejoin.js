@@ -81,9 +81,8 @@ function setupLeaveRejoin(bot, createBot) {
         stopped = false
 
         // Stay connected: 2 minutes -> 15 minutes (More realistic AFK behavior)
-        // User asked for "100ms -> 240s" but 100ms is too short for stability.
-        // I'll set it to 60s -> 300s (1m - 5m) to ensure it stays online a bit.
-        const stayTime = randomMs(60000, 15000)
+        // Stay connected 1-5 minutes before a scheduled leave/rejoin cycle.
+        const stayTime = randomMs(60000, 300000)
 
         logThrottled(`[AFK] Will leave in ${Math.round(stayTime / 1000)} seconds`)
 
@@ -101,24 +100,18 @@ function setupLeaveRejoin(bot, createBot) {
         }, stayTime)
     })
 
-    // Stop timers when connection ends, then rejoin
+    // When the connection ends for ANY reason, just clean up our timers.
+    // Reconnection is handled by index.js — no duplicate reconnect here.
     bot.on('end', () => {
         cleanup()
-        // Small delay before scheduling rejoin to allow other cleanup to happen
-        stopped = false
-        scheduleReconnect('end')
     })
 
-    bot.on('kicked', (reason) => {
+    bot.on('kicked', () => {
         cleanup()
-        stopped = false
-        scheduleReconnect(`kicked:${String(reason).slice(0, 60)}`)
     })
 
-    bot.on('error', (err) => {
+    bot.on('error', () => {
         cleanup()
-        stopped = false
-        scheduleReconnect(`error:${err?.code || 'unknown'}`)
     })
 }
 

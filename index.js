@@ -374,7 +374,7 @@ function createBot() {
       port: config.server.port,
       version: config.server.version,
       hideErrors: false,
-      checkTimeoutInterval: 0 // DISABLE client-side timeout checks (prevents 30s disconnects)
+      checkTimeoutInterval: 120000 // 2 minutes - detects dead connections without false-positive disconnects
     });
 
     bot.loadPlugin(pathfinder);
@@ -411,6 +411,23 @@ function createBot() {
 
       // Setup enhanced Leave/Rejoin logic
       setupLeaveRejoin(bot, createBot);
+
+      // Attempt creative mode (only works if bot has OP)
+      setTimeout(() => {
+        if (bot && botState.connected) {
+          bot.chat('/gamemode creative');
+          console.log('[INFO] Attempted to set creative mode (requires OP)');
+        }
+      }, 3000);
+
+      bot.on('messagestr', (message) => {
+        if (
+          message.includes('commands.gamemode.success.self') ||
+          message.includes('Set own game mode to Creative Mode')
+        ) {
+          console.log('[INFO] Bot is now in Creative Mode.');
+        }
+      });
     });
 
     // Handle disconnection
@@ -425,11 +442,7 @@ function createBot() {
       }
 
       if (config.utils['auto-reconnect']) {
-        // If we were spawned, leaveRejoin.js handles reconnection.
-        // If we failed BEFORE spawn, we must reconnect here.
-        if (!wasSpawned) {
-          scheduleReconnect();
-        }
+        scheduleReconnect();
       }
     });
 
@@ -445,9 +458,7 @@ function createBot() {
       }
 
       if (config.utils['auto-reconnect']) {
-        if (!wasSpawned) {
-          scheduleReconnect();
-        }
+        scheduleReconnect();
       }
     });
 
@@ -873,7 +884,7 @@ process.on('SIGINT', () => {
 // START THE BOT
 // ============================================================
 console.log('='.repeat(50));
-console.log('  Minecraft AFK Bot v2.2 - Infinite Uptime Edition');
+console.log('  Minecraft AFK Bot v2.3 - Bug Fix Edition');
 console.log('='.repeat(50));
 console.log(`Server: ${config.server.ip}:${config.server.port}`);
 console.log(`Version: ${config.server.version}`);
